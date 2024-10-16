@@ -178,7 +178,6 @@ def generate_thm(index, thm, folder):
     for stmt in data:
         seq = s2i(stmt)
         valid_seq_f.write(' '.join([str(i) for i in seq]) + "\n")
-    print("depth", depth)
     for seq in get_deep_seqs(operations, depth, max_len):
         if not check_seq(seq):
             continue
