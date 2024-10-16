@@ -10,10 +10,11 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
+batch_size = 5000
 global_vars = set()
 word_map: dict[str, int] = {}
 max_len = 2048
-depth = 2
+depth = 1
 n_thread = 8
 n_futures = 128
 
@@ -284,7 +285,6 @@ if __name__ == "__main__":
     for idx, word in enumerate(words):
         word_map[word] = idx
     
-    batch_size = 5000
     n_thms = len(thms) # 测试5000条
 
     for start_idx in range(0, n_thms, batch_size):
