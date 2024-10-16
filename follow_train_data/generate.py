@@ -244,7 +244,6 @@ def upload(output_zip):
             print(f"上传失败: {e}")
 
 if __name__ == "__main__":
-    """
     # 删除旧文件夹
     if os.path.exists('databases'):
         shutil.rmtree('databases')
@@ -253,7 +252,6 @@ if __name__ == "__main__":
     dataset_path = hf_hub_download(repo_id="Follow-Lang/set.mm", repo_type="dataset", filename="datasets/set.mm.zip")
     with zipfile.ZipFile(dataset_path, 'r') as zip_ref:
         zip_ref.extractall("databases/")
-    """
 
     extracted_files = os.listdir("databases/")
     print("Extracted files: ", extracted_files)
