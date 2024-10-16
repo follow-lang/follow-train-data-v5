@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "follow-train-data"
+version = "0.0.1"
+description = "Generate train data for follow model."
+authors = ["penglingwei <penglingwei@zju.edu.cn>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "follow_train_data"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+huggingface-hub = "^0.25.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

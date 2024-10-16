@@ -1,0 +1,35 @@
+name: Generate, Upload, and Release Dataset
+
+on:
+  push:
+    tags:
+      - 'v*'  # 触发条件：每次推送带 v* 格式的标签时触发
+
+jobs:
+  build:
+    environment: production # 指定使用的环境
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.6'  # 使用适当的 Python 版本
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> $GITHUB_ENV  # 添加 Poetry 到 PATH 环境变量
+
+      - name: Install dependencies with Poetry
+        run: |
+          poetry install  # 安装依赖
+
+      - name: Generate Train Dataset
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}  # 从 GitHub Secrets 获取 Hugging Face token
+        run: |
+          poetry run python -m follow_train_data.generate 
