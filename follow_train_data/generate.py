@@ -293,7 +293,7 @@ if __name__ == "__main__":
         train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         output_zip = train_dir + ".zip" 
         if start_idx == 0:
-            generate_thms(start_idx, end_idx, train_dir, 2) # 第一部分的数据可以追溯到depth=3
+            generate_thms(start_idx, end_idx, train_dir, 3) # 第一部分的数据可以追溯到depth=3
         else:
             generate_thms(start_idx, end_idx, train_dir, 1)
         zip_dataset(train_dir, output_zip)
