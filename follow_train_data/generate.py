@@ -162,7 +162,7 @@ def get_train_data(label, input_args=[]):
     return get_thm_train_data(block, arg_map) # (memories, new_operators)
 
 def check_seq(toks: list[int], max_len=max_len):
-  if len(toks) < max_len:
+  if len(toks) <= max_len:
     return True
   return False 
 
