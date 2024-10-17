@@ -293,7 +293,7 @@ if __name__ == "__main__":
         train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         output_zip = train_dir + ".zip" 
         if start_idx == 0:
-            generate_thms(start_idx, end_idx, train_dir, 3) # 第一部分的数据可以追溯到depth=3
+            generate_thms(start_idx, end_idx, train_dir, 4) # 第一部分的数据可以追溯到depth=3
         else:
             generate_thms(start_idx, end_idx, train_dir, 1)
         zip_dataset(train_dir, output_zip)
@@ -301,13 +301,25 @@ if __name__ == "__main__":
         shutil.rmtree(train_dir)
         os.remove(output_zip)
 
-    n_thms2 = len(thms)
+    n_thms2 = 37000
     batch_size2 = 1000
-    for start_idx in range(n_thms, n_thms2, 1000):
+    for start_idx in range(n_thms, n_thms2, batch_size2):
         end_idx = start_idx + batch_size2 if start_idx + batch_size2 < n_thms2 else n_thms2
         train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         output_zip = train_dir + ".zip" 
         generate_thms(start_idx, end_idx, train_dir, 1)
+        zip_dataset(train_dir, output_zip)
+        upload(output_zip)
+        shutil.rmtree(train_dir)
+        os.remove(output_zip)
+
+    n_thms3 = len(thms)
+    batch_size3 = 1000
+    for start_idx in range(n_thms2, n_thms3, batch_size3):
+        end_idx = start_idx + batch_size3 if start_idx + batch_size3 < n_thms3 else n_thms3
+        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
+        output_zip = train_dir + ".zip" 
+        generate_thms(start_idx, end_idx, train_dir, 0)
         zip_dataset(train_dir, output_zip)
         upload(output_zip)
         shutil.rmtree(train_dir)
