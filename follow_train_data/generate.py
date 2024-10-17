@@ -300,3 +300,15 @@ if __name__ == "__main__":
         upload(output_zip)
         shutil.rmtree(train_dir)
         os.remove(output_zip)
+
+    n_thms2 = len(thms)
+    batch_size2 = 1000
+    for start_idx in range(n_thms, n_thms2, 1000):
+        end_idx = start_idx + batch_size2 if start_idx + batch_size2 < n_thms2 else n_thms2
+        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
+        output_zip = train_dir + ".zip" 
+        generate_thms(start_idx, end_idx, train_dir, 1)
+        zip_dataset(train_dir, output_zip)
+        upload(output_zip)
+        shutil.rmtree(train_dir)
+        os.remove(output_zip)
