@@ -186,7 +186,7 @@ def generate_thm(index, thm, folder, depth=0):
     print(f"{index}: {thm}")
 
 
-def generate_thms(start_idx: int, end_idx:int, train_dir: str):
+def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
     if os.path.exists(train_dir):
         shutil.rmtree(train_dir)
     os.makedirs(train_dir)
@@ -203,7 +203,7 @@ def generate_thms(start_idx: int, end_idx:int, train_dir: str):
                         futures.remove(future)
             thm = thms[index]
             # 提交任务到线程池
-            futures.append(executor.submit(generate_thm, index, thm, train_dir))
+            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth))
             index += 1
         # 确保所有任务完成
         for future in as_completed(futures):
