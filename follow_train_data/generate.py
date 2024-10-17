@@ -314,7 +314,7 @@ if __name__ == "__main__":
         shutil.rmtree(train_dir)
         os.remove(output_zip)
 
-    n_thms2 = 37000
+    n_thms2 = 23000
     batch_size2 = 1000
     for start_idx in range(n_thms, n_thms2, batch_size2):
         end_idx = start_idx + batch_size2 if start_idx + batch_size2 < n_thms2 else n_thms2
