@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 batch_size = 5000
 global_vars = set()
 word_map: dict[str, int] = {}
-max_len = 2048
+max_len = 1024
 n_thread = 8
 n_futures = 128
 
@@ -43,7 +43,20 @@ def s2i(stmt: str):
     stmt = stmt.strip()
     if len(stmt) == 0:
         return []
-    return [word_map.get(word, -1) for word in stmt.split(" ")]
+    # 减少token的数量 
+    toks = [word_map.get(word, -1) for word in stmt.split(" ") if word not in ('(', ')', ',')]
+    if len(toks) > max_len:
+        # 如果action是完整的，也可以保留这条记录
+        end_idx =word_map.get("<end>", -1)
+        cnt = 0
+        for idx, tok in enumerate(toks):
+            if tok == end_idx:
+                cnt += 1
+            if cnt == 2:
+                break
+        if idx < max_len:
+            toks = toks[:max_len]
+    return toks
 
 
 def stmt_subs(targets, conditions, dvs, arg_map={}):
