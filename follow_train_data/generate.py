@@ -285,7 +285,9 @@ if __name__ == "__main__":
     for idx, word in enumerate(words):
         word_map[word] = idx
     
-    n_thms = len(thms) # 测试5000条
+    upload('databases/words.txt') # 上传单词表 
+    
+    n_thms = 20000 # github 只能支持到20000 # len(thms) # 测试5000条
 
     for start_idx in range(0, n_thms, batch_size):
         end_idx = start_idx + batch_size if start_idx + batch_size < n_thms else n_thms
