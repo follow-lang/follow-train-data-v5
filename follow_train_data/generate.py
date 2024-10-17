@@ -14,7 +14,6 @@ batch_size = 5000
 global_vars = set()
 word_map: dict[str, int] = {}
 max_len = 2048
-depth = 1
 n_thread = 8
 n_futures = 128
 
@@ -166,7 +165,7 @@ def get_deep_seqs(operations, depth=0, max_len=max_len):
     if len(op_operations) > 0 and depth > 0:
       yield from get_deep_seqs(op_operations, depth - 1, max_len) 
 
-def generate_thm(index, thm, folder):
+def generate_thm(index, thm, folder, depth=0):
     data, operations = get_train_data(thm)
     invalid = False
     for stmt in data:
@@ -293,7 +292,10 @@ if __name__ == "__main__":
         end_idx = start_idx + batch_size if start_idx + batch_size < n_thms else n_thms
         train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         output_zip = train_dir + ".zip" 
-        generate_thms(start_idx, end_idx, train_dir)
+        if start_idx == 0:
+            generate_thms(start_idx, end_idx, train_dir, 2) # 第一部分的数据可以追溯到depth=3
+        else:
+            generate_thms(start_idx, end_idx, train_dir, 1)
         zip_dataset(train_dir, output_zip)
         upload(output_zip)
         shutil.rmtree(train_dir)
