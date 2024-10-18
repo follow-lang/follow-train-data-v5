@@ -38,12 +38,12 @@ def read_json(name, base = "databases/json"):
     block = json.load(f)
   return block
 
-def s2i(stmt: str): 
+def tokenizer(stmt: str): 
     stmt = stmt.strip()
     if len(stmt) == 0:
         return []
     # 减少token的数量 
-    toks = [word_map.get(word, -1) for word in stmt.split(" ") if word not in ('(', ')', ',')]
+    toks = [word for word in stmt.split(" ") if word not in ('(', ')', ',')]
     return toks
 
 
@@ -90,7 +90,7 @@ def get_axiom_train_data(axiom, arg_map={}):
     )
     rst = get_block_train_data(new_targets, new_conditions, new_diffs)
     rst = " ".join([rst, rst, "<qed>", "<eos>"]) # [state, action, <qed>]
-    return [s2i(rst)], []
+    return [tokenizer(rst)], []
 
 
 def get_thm_train_data(thm, arg_map={}):
@@ -116,7 +116,7 @@ def get_thm_train_data(thm, arg_map={}):
         else:
             new_state, _, _ = stmt_subs(state, [], [], arg_map)
             new_state_tokens = get_block_train_data(new_state, [], [], tails)
-        new_state_tokens_list.append(s2i(new_state_tokens))
+        new_state_tokens_list.append(tokenizer(new_state_tokens))
     
     new_action_tokens_list = []
     for a_targets, a_conditions, a_dvs in actions:
@@ -124,7 +124,7 @@ def get_thm_train_data(thm, arg_map={}):
             a_targets, a_conditions, a_dvs, arg_map
         )
         action_tokens = get_block_train_data(new_a_targets, new_a_conditions, new_a_dvs)
-        new_action_tokens_list.append(s2i(action_tokens))
+        new_action_tokens_list.append(tokenizer(action_tokens))
 
     memories = []
     for start_idx in range(len(new_action_tokens_list)):
