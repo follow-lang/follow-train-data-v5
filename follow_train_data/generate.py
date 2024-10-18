@@ -255,11 +255,11 @@ def run(start, end, batch_size, depth):
         end_idx = start_idx + batch_size if start_idx + batch_size < end else end
         train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         generate_thms(start_idx, end_idx, train_dir, depth) 
-        # output_zip = train_dir + ".zip" 
-        # zip_dataset(train_dir, output_zip)
-        # upload(output_zip)
-        # shutil.rmtree(train_dir)
-        # os.remove(output_zip)
+        output_zip = train_dir + ".zip" 
+        zip_dataset(train_dir, output_zip)
+        upload(output_zip)
+        shutil.rmtree(train_dir)
+        os.remove(output_zip)
 
 if __name__ == "__main__":
     # 删除旧文件夹
