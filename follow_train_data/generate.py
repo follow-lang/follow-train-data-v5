@@ -250,16 +250,23 @@ def upload(output_zip):
         except Exception as e:
             print(f"上传失败: {e}")
 
-def run(start, end, batch_size, depth):
+def run(start, end, depth, max_size=1024, batch_size=128):
+    file_index = 0
+    train_dir = f'databases/train_{file_index}'
     for start_idx in range(start, end, batch_size):
         end_idx = start_idx + batch_size if start_idx + batch_size < end else end
-        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
         generate_thms(start_idx, end_idx, train_dir, depth) 
-        output_zip = train_dir + ".zip" 
-        zip_dataset(train_dir, output_zip)
-        upload(output_zip)
-        shutil.rmtree(train_dir)
-        os.remove(output_zip)
+
+        # 检查文件夹大小
+        folder_size = get_folder_size(train_dir)
+        if folder_size >= max_size:  # 如果文件夹大小接近1GB
+            output_zip = train_dir + ".zip" 
+            zip_dataset(train_dir, output_zip)
+            upload(output_zip)
+            shutil.rmtree(train_dir)
+            os.remove(output_zip)
+            file_index += 1
+            train_dir = f'databases/train_{file_index}'
 
 if __name__ == "__main__":
     # 删除旧文件夹
@@ -305,4 +312,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, 15000, 1000, 5) # 前15000个证明深度等于5
+    run(0, len(thms), 5, max_size=2*1024, batch_size=128)
