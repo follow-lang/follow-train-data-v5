@@ -312,4 +312,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, len(thms), 5, max_size=2*1024, batch_size=128)
+    run(0, len(thms), depth=2, max_size=2*1024, batch_size=128)
