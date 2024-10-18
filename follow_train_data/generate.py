@@ -10,7 +10,6 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-batch_size = 5000
 global_vars = set()
 word_map: dict[str, int] = {}
 max_len = 1024
@@ -251,6 +250,17 @@ def upload(output_zip):
         except Exception as e:
             print(f"上传失败: {e}")
 
+def run(start, end, batch_size, depth):
+    for start_idx in range(start, end, batch_size):
+        end_idx = start_idx + batch_size if start_idx + batch_size < end else end
+        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
+        generate_thms(start_idx, end_idx, train_dir, depth) 
+        # output_zip = train_dir + ".zip" 
+        # zip_dataset(train_dir, output_zip)
+        # upload(output_zip)
+        # shutil.rmtree(train_dir)
+        # os.remove(output_zip)
+
 if __name__ == "__main__":
     # 删除旧文件夹
     if os.path.exists('databases'):
@@ -294,42 +304,5 @@ if __name__ == "__main__":
         word_map[word] = idx
     
     upload('databases/words.txt') # 上传单词表 
-    
-    n_thms = 15000 # github 只能支持到15000 # len(thms) # 测试5000条
 
-    for start_idx in range(0, n_thms, batch_size):
-        end_idx = start_idx + batch_size if start_idx + batch_size < n_thms else n_thms
-        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
-        output_zip = train_dir + ".zip" 
-        if start_idx == 0:
-            generate_thms(start_idx, end_idx, train_dir, 4) # 第一部分的数据可以追溯到depth=3
-        else:
-            generate_thms(start_idx, end_idx, train_dir, 1)
-        zip_dataset(train_dir, output_zip)
-        upload(output_zip)
-        shutil.rmtree(train_dir)
-        os.remove(output_zip)
-
-    n_thms2 = 23000
-    batch_size2 = 1000
-    for start_idx in range(n_thms, n_thms2, batch_size2):
-        end_idx = start_idx + batch_size2 if start_idx + batch_size2 < n_thms2 else n_thms2
-        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
-        output_zip = train_dir + ".zip" 
-        generate_thms(start_idx, end_idx, train_dir, 1)
-        zip_dataset(train_dir, output_zip)
-        upload(output_zip)
-        shutil.rmtree(train_dir)
-        os.remove(output_zip)
-
-    n_thms3 = len(thms)
-    batch_size3 = 1000
-    for start_idx in range(n_thms2, n_thms3, batch_size3):
-        end_idx = start_idx + batch_size3 if start_idx + batch_size3 < n_thms3 else n_thms3
-        train_dir = f'databases/train_{start_idx}_{end_idx-1}'
-        output_zip = train_dir + ".zip" 
-        generate_thms(start_idx, end_idx, train_dir, 0)
-        zip_dataset(train_dir, output_zip)
-        upload(output_zip)
-        shutil.rmtree(train_dir)
-        os.remove(output_zip)
+    run(0, 15000, 1000, 5) # 前15000个证明深度等于5
