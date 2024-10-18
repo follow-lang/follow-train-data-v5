@@ -45,17 +45,6 @@ def s2i(stmt: str):
         return []
     # 减少token的数量 
     toks = [word_map.get(word, -1) for word in stmt.split(" ") if word not in ('(', ')', ',')]
-    if len(toks) > max_len:
-        # 如果action是完整的，也可以保留这条记录
-        end_idx =word_map.get("<end>", -1)
-        cnt = 0
-        for idx, tok in enumerate(toks):
-            if tok == end_idx:
-                cnt += 1
-            if cnt == 2:
-                break
-        if idx < max_len:
-            toks = toks[:max_len]
     return toks
 
 
@@ -102,7 +91,7 @@ def get_axiom_train_data(axiom, arg_map={}):
     )
     rst = get_block_train_data(new_targets, new_conditions, new_diffs)
     rst = " ".join([rst, rst, "<qed>", "<eos>"]) # [state, action, <qed>]
-    return [rst], []
+    return [s2i(rst)], []
 
 
 def get_thm_train_data(thm, arg_map={}):
@@ -121,29 +110,37 @@ def get_thm_train_data(thm, arg_map={}):
     states = thm["states"]
     actions = thm["actions"]
 
-    new_states = [get_block_train_data(new_targets, [], [], tails)]
-
-    memories = []
-    for idx in range(len(actions)):
-        new_state_tokens = new_states[idx]
-
-        a_targets, a_conditions, a_dvs = actions[idx]
+    new_state_tokens_list = []
+    for state in states:
+        if len(state) == 0:
+            new_state_tokens = '<qed> <end>'
+        else:
+            new_state, _, _ = stmt_subs(state, [], [], arg_map)
+            new_state_tokens = get_block_train_data(new_state, [], [], tails)
+        new_state_tokens_list.append(s2i(new_state_tokens))
+    
+    new_action_tokens_list = []
+    for a_targets, a_conditions, a_dvs in actions:
         new_a_targets, new_a_conditions, new_a_dvs = stmt_subs(
             a_targets, a_conditions, a_dvs, arg_map
         )
         action_tokens = get_block_train_data(new_a_targets, new_a_conditions, new_a_dvs)
+        new_action_tokens_list.append(s2i(action_tokens))
 
-        next_state = states[idx + 1]
-        if len(next_state) > 0:
-            new_next_state, _, _ = stmt_subs(next_state, [], [], arg_map)
-            new_next_state_tokens = get_block_train_data(new_next_state, [], [], tails)
-            memories.append(
-                " ".join([new_state_tokens, action_tokens, new_next_state_tokens])
-            )
-            new_states.append(new_next_state_tokens)
-        else:
-            memories.append(" ".join([new_state_tokens, action_tokens, "<qed>", "<eos>"]))
-            new_states.append("")
+    memories = []
+    for start_idx in range(len(new_action_tokens_list)):
+        memory = new_state_tokens_list[start_idx] + new_action_tokens_list[start_idx]
+        initial_length = len(memory)
+        end_idx = start_idx + 1
+        while len(memory) < max_len and end_idx < len(new_state_tokens_list):
+            memory += new_state_tokens_list[end_idx]
+            if end_idx < len(new_action_tokens_list):
+                memory += new_action_tokens_list[end_idx]
+            end_idx += 1
+        if initial_length < len(memory):
+            # 补充信息导致超长
+            memory = memory[:max_len]
+        memories.append(memory)
     new_operators = []
     for op_label, op_args in thm["operators"]:
         new_op_args = stmt_subs(op_args, [], [], arg_map)[0]
@@ -166,36 +163,35 @@ def check_seq(toks: list[int], max_len=max_len):
     return True
   return False 
 
-def get_deep_seqs(operations, depth=0, max_len=max_len):
+def get_deep_memory(operations, depth=0, max_len=max_len):
   for op_label, op_args in operations:
     try:
-      op_data, op_operations = get_train_data(op_label, op_args)
+      op_memories, op_operations = get_train_data(op_label, op_args)
     except Exception as e:
       print(e) 
       continue 
-    for stmt in op_data:
-      yield s2i(stmt)
+    for memory in op_memories:
+      yield memory
     if len(op_operations) > 0 and depth > 0:
-      yield from get_deep_seqs(op_operations, depth - 1, max_len) 
+      yield from get_deep_memory(op_operations, depth - 1, max_len) 
 
 def generate_thm(index, thm, folder, depth=0):
-    data, operations = get_train_data(thm)
+    memories, operations = get_train_data(thm)
     invalid = False
-    for stmt in data:
-        if not check_seq(s2i(stmt)):
+    for memory in memories:
+        if not check_seq(memory):
             invalid = True  # 至少当前定理证明过程应该满足完整性
             break
     if invalid:
         return 
-    valid_seq_f = open(os.path.join(folder, thm + '.txt'), "w") 
-    for stmt in data:
-        seq = s2i(stmt)
-        valid_seq_f.write(' '.join([str(i) for i in seq]) + "\n")
-    for seq in get_deep_seqs(operations, depth, max_len):
-        if not check_seq(seq):
+    valid_memory_f = open(os.path.join(folder, thm + '.txt'), "w") 
+    for memory in memories:
+        valid_memory_f.write(' '.join([str(i) for i in memory]) + "\n")
+    for memory in get_deep_memory(operations, depth, max_len):
+        if not check_seq(memory):
             continue
-        valid_seq_f.write(' '.join([str(i) for i in seq]) + "\n")
-    valid_seq_f.close()
+        valid_memory_f.write(' '.join([str(i) for i in memory]) + "\n")
+    valid_memory_f.close()
     print(f"{index}: {thm}")
 
 
