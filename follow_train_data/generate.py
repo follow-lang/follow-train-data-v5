@@ -16,7 +16,7 @@ max_len = 1024
 n_thread = 4
 n_futures = 32
 total_memory_count = 0 
-max_memory_size = 500_0000
+max_memory_size = 400_0000
 max_depth = 3
 
 def get_folder_size(folder_path):
