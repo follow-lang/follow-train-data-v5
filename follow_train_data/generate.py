@@ -16,8 +16,8 @@ max_len = 1024
 n_thread = 4
 n_futures = 32
 total_memory_count = 0 
-max_memory_size = 200_0000
-max_depth = 10
+max_memory_size = 500_0000
+max_depth = 4
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -171,19 +171,19 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
     for op_label, op_args in operations:
         try:
             op_memories, op_operations = get_train_data(op_label, op_args)
+            for memory in op_memories:
+                if not check_seq(memory):
+                    continue
+                total_memory_count += 1
+                yield memory
+            next_level_operations.extend(op_operations)
         except Exception as e:
             print(e) 
             continue 
-        for memory in op_memories:
-            if not check_seq(memory):
-                continue
-            total_memory_count += 1
-            yield memory
-        next_level_operations.extend(op_operations)
     
     # BFS, 保证deep完整 
     if len(next_level_operations) > 0 and depth > 0 and total_memory_count < max_memory_size:
-        yield from get_deep_memory(op_operations, depth - 1, max_len) 
+        yield from get_deep_memory(next_level_operations, depth - 1, max_len) 
 
 def generate_thm(index, thm, folder, depth=0):
     global total_memory_count
