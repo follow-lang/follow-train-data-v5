@@ -167,6 +167,8 @@ def check_seq(toks: list[int], max_len=max_len):
 
 def get_deep_memory(operations, depth=0, max_len=max_len):
     global total_memory_count, max_memory_size
+    if total_memory_count >= max_memory_size:
+        return
     next_level_operations = []
     for op_label, op_args in operations:
         try:
