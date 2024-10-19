@@ -16,6 +16,7 @@ max_len = 1024
 n_thread = 4
 n_futures = 32
 total_memory_count = 0 
+max_size = 2*1024*1024
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -159,23 +160,31 @@ def get_train_data(label, input_args=[]):
     return get_thm_train_data(block, arg_map) # (memories, new_operators)
 
 def check_seq(toks: list[int], max_len=max_len):
-  if len(toks) <= max_len:
-    return True
-  return False 
+    if len(toks) <= max_len:
+        return True
+    return False 
 
 def get_deep_memory(operations, depth=0, max_len=max_len):
-  for op_label, op_args in operations:
-    try:
-      op_memories, op_operations = get_train_data(op_label, op_args)
-    except Exception as e:
-      print(e) 
-      continue 
-    for memory in op_memories:
-      yield memory
-    if len(op_operations) > 0 and depth > 0:
-      yield from get_deep_memory(op_operations, depth - 1, max_len) 
+    global total_memory_count, max_size
+    next_level_operations = []
+    for op_label, op_args in operations:
+        try:
+            op_memories, op_operations = get_train_data(op_label, op_args)
+        except Exception as e:
+            print(e) 
+            continue 
+        for memory in op_memories:
+            if not check_seq(memory):
+                continue
+            total_memory_count += 1
+            yield memory
+        next_level_operations.extend(op_operations)
+    
+    # BFS, 保证deep完整 
+    if len(next_level_operations) > 0 and depth > 0 and total_memory_count < max_size:
+        yield from get_deep_memory(op_operations, depth - 1, max_len) 
 
-def generate_thm(index, thm, folder, depth=0, max_size=1024):
+def generate_thm(index, thm, folder, depth=0):
     global total_memory_count
     memories, operations = get_train_data(thm)
     invalid = False
@@ -191,10 +200,6 @@ def generate_thm(index, thm, folder, depth=0, max_size=1024):
         valid_memory_f.write(s)
         total_memory_count += 1
     for memory in get_deep_memory(operations, depth, max_len):
-        if total_memory_count > max_size:
-            break
-        if not check_seq(memory):
-            continue
         s = ' '.join([str(i) for i in memory]) + "\n"
         valid_memory_f.write(s)
         total_memory_count += 1
@@ -202,11 +207,7 @@ def generate_thm(index, thm, folder, depth=0, max_size=1024):
     print(f"{index}: {thm}")
 
 
-def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0, max_size=1024):
-    if os.path.exists(train_dir):
-        shutil.rmtree(train_dir)
-    os.makedirs(train_dir)
-
+def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
     index = start_idx
     # 创建线程池
     with ThreadPoolExecutor(max_workers=n_thread) as executor:
@@ -219,7 +220,7 @@ def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0, max_size
                         futures.remove(future)
             thm = thms[index]
             # 提交任务到线程池
-            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth, max_size))
+            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth))
             index += 1
         # 确保所有任务完成
         for future in as_completed(futures):
@@ -258,13 +259,18 @@ def upload(output_zip):
         except Exception as e:
             print(f"上传失败: {e}")
 
-def run(start, end, depth, max_size=1024, batch_size=128):
-    global total_memory_count
+def run(start, end, depth, batch_size=128):
+    global total_memory_count, max_size
+    total_memory_count = 0
     file_index = 0
     train_dir = f'databases/train_{file_index}'
+    if os.path.exists(train_dir):
+        shutil.rmtree(train_dir)
+    os.makedirs(train_dir)
+
     for start_idx in range(start, end, batch_size):
         end_idx = start_idx + batch_size if start_idx + batch_size < end else end
-        generate_thms(start_idx, end_idx, train_dir, depth, max_size) 
+        generate_thms(start_idx, end_idx, train_dir, depth) 
 
         # 检查文件夹大小
         if total_memory_count > max_size: 
@@ -276,6 +282,9 @@ def run(start, end, depth, max_size=1024, batch_size=128):
             file_index += 1
             train_dir = f'databases/train_{file_index}'
             total_memory_count = 0
+            if os.path.exists(train_dir):
+                shutil.rmtree(train_dir)
+            os.makedirs(train_dir)
 
 if __name__ == "__main__":
     # 删除旧文件夹
@@ -321,4 +330,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, len(thms), depth=2, max_size=2*1024*1024, batch_size=n_futures)
+    run(0, len(thms), depth=2, batch_size=n_futures)
