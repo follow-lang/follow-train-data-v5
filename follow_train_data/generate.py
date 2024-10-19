@@ -16,7 +16,8 @@ max_len = 1024
 n_thread = 4
 n_futures = 32
 total_memory_count = 0 
-max_size = 2*1024*1024
+max_memory_size = 500_0000
+max_depth = 4
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -165,7 +166,7 @@ def check_seq(toks: list[int], max_len=max_len):
     return False 
 
 def get_deep_memory(operations, depth=0, max_len=max_len):
-    global total_memory_count, max_size
+    global total_memory_count, max_memory_size
     next_level_operations = []
     for op_label, op_args in operations:
         try:
@@ -181,7 +182,7 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
         next_level_operations.extend(op_operations)
     
     # BFS, 保证deep完整 
-    if len(next_level_operations) > 0 and depth > 0 and total_memory_count < max_size:
+    if len(next_level_operations) > 0 and depth > 0 and total_memory_count < max_memory_size:
         yield from get_deep_memory(op_operations, depth - 1, max_len) 
 
 def generate_thm(index, thm, folder, depth=0):
@@ -260,7 +261,7 @@ def upload(output_zip):
             print(f"上传失败: {e}")
 
 def run(start, end, depth, batch_size=128):
-    global total_memory_count, max_size
+    global total_memory_count, max_memory_size
     total_memory_count = 0
     file_index = 0
     train_dir = f'databases/train_{file_index}'
@@ -273,7 +274,7 @@ def run(start, end, depth, batch_size=128):
         generate_thms(start_idx, end_idx, train_dir, depth) 
 
         # 检查文件夹大小
-        if total_memory_count > max_size: 
+        if total_memory_count > max_memory_size: 
             output_zip = train_dir + ".zip" 
             zip_dataset(train_dir, output_zip)
             upload(output_zip)
@@ -330,4 +331,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, len(thms), depth=2, batch_size=n_futures)
+    run(0, len(thms), depth=max_depth, batch_size=n_futures)
