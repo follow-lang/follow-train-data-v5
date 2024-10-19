@@ -13,8 +13,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 global_vars = set()
 word_map: dict[str, int] = {}
 max_len = 1024
-n_thread = 8
-n_futures = 128
+n_thread = 4
+n_futures = 32
+total_memory_count = 0 
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -174,7 +175,8 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
     if len(op_operations) > 0 and depth > 0:
       yield from get_deep_memory(op_operations, depth - 1, max_len) 
 
-def generate_thm(index, thm, folder, depth=0):
+def generate_thm(index, thm, folder, depth=0, max_size=1024):
+    global total_memory_count
     memories, operations = get_train_data(thm)
     invalid = False
     for memory in memories:
@@ -185,16 +187,22 @@ def generate_thm(index, thm, folder, depth=0):
         return 
     valid_memory_f = open(os.path.join(folder, thm + '.txt'), "w") 
     for memory in memories:
-        valid_memory_f.write(' '.join([str(i) for i in memory]) + "\n")
+        s = ' '.join([str(i) for i in memory]) + "\n"
+        valid_memory_f.write(s)
+        total_memory_count += 1
     for memory in get_deep_memory(operations, depth, max_len):
+        if total_memory_count > max_size:
+            break
         if not check_seq(memory):
             continue
-        valid_memory_f.write(' '.join([str(i) for i in memory]) + "\n")
+        s = ' '.join([str(i) for i in memory]) + "\n"
+        valid_memory_f.write(s)
+        total_memory_count += 1
     valid_memory_f.close()
     print(f"{index}: {thm}")
 
 
-def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
+def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0, max_size=1024):
     if os.path.exists(train_dir):
         shutil.rmtree(train_dir)
     os.makedirs(train_dir)
@@ -211,7 +219,7 @@ def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
                         futures.remove(future)
             thm = thms[index]
             # 提交任务到线程池
-            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth))
+            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth, max_size))
             index += 1
         # 确保所有任务完成
         for future in as_completed(futures):
@@ -251,6 +259,7 @@ def upload(output_zip):
             print(f"上传失败: {e}")
 
 def run(start, end, depth, max_size=1024, batch_size=128):
+    global total_memory_count
     file_index = 0
     train_dir = f'databases/train_{file_index}'
     for start_idx in range(start, end, batch_size):
@@ -258,8 +267,7 @@ def run(start, end, depth, max_size=1024, batch_size=128):
         generate_thms(start_idx, end_idx, train_dir, depth) 
 
         # 检查文件夹大小
-        folder_size = get_folder_size(train_dir)
-        if folder_size >= max_size:  # 如果文件夹大小接近1GB
+        if total_memory_count > max_size: 
             output_zip = train_dir + ".zip" 
             zip_dataset(train_dir, output_zip)
             upload(output_zip)
@@ -267,6 +275,7 @@ def run(start, end, depth, max_size=1024, batch_size=128):
             os.remove(output_zip)
             file_index += 1
             train_dir = f'databases/train_{file_index}'
+            total_memory_count = 0
 
 if __name__ == "__main__":
     # 删除旧文件夹
@@ -312,4 +321,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, len(thms), depth=2, max_size=2*1024, batch_size=128)
+    run(0, len(thms), depth=2, max_size=2*1024*1024, batch_size=n_futures)
