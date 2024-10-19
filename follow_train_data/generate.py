@@ -178,6 +178,8 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
                     continue
                 total_memory_count += 1
                 yield memory
+                if total_memory_count >= max_memory_size:
+                    break
             next_level_operations.extend(op_operations)
         except Exception as e:
             print(e) 
