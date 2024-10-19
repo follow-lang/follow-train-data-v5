@@ -92,7 +92,7 @@ def get_axiom_train_data(axiom, arg_map={}):
         axiom["targets"], axiom["conditions"], axiom["dvs"], arg_map
     )
     rst = get_block_train_data(new_targets, new_conditions, new_diffs)
-    rst = " ".join([rst, rst, "<qed>", "<eos>"]) # [state, action, <qed>]
+    rst = " ".join([rst, rst, "<qed>", "<end>"]) # [state, action, <qed>]
     return [tokenizer(rst)], []
 
 
