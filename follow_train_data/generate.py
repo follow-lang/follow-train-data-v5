@@ -13,10 +13,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 global_vars = set()
 word_map: dict[str, int] = {}
 max_len = 1024
-n_thread = 4
-n_futures = 4
+n_thread = 32
+n_futures = 32
 total_memory_count = 0 
-max_memory_size = 200_0000
+max_memory_size = 2*1024*1024
 max_depth = 2
 
 def get_folder_size(folder_path):
