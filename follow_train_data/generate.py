@@ -264,7 +264,7 @@ def run(start, end, depth, max_size=1024, batch_size=128):
     train_dir = f'databases/train_{file_index}'
     for start_idx in range(start, end, batch_size):
         end_idx = start_idx + batch_size if start_idx + batch_size < end else end
-        generate_thms(start_idx, end_idx, train_dir, depth) 
+        generate_thms(start_idx, end_idx, train_dir, depth, max_size) 
 
         # 检查文件夹大小
         if total_memory_count > max_size: 
