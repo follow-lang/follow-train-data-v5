@@ -16,8 +16,8 @@ max_len = 1024
 n_thread = 4
 n_futures = 32
 total_memory_count = 0 
-max_memory_size = 500_0000
-max_depth = 4
+max_memory_size = 200_0000
+max_depth = 10
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -203,7 +203,6 @@ def generate_thm(index, thm, folder, depth=0):
     for memory in get_deep_memory(operations, depth, max_len):
         s = ' '.join([str(i) for i in memory]) + "\n"
         valid_memory_f.write(s)
-        total_memory_count += 1
     valid_memory_f.close()
     print(f"{index}: {thm}")
 
