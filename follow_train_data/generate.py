@@ -18,6 +18,9 @@ n_futures = 32
 total_memory_count = 0 
 max_memory_size = 2*1024*1024
 max_depth = 2
+min_thm_number = 0
+max_thm_number = 24000
+zip_offset = 0
 
 def get_folder_size(folder_path):
     total_size = 0
@@ -268,7 +271,7 @@ def upload(output_zip):
 def run(start, end, depth, batch_size=128):
     global total_memory_count, max_memory_size
     total_memory_count = 0
-    file_index = 0
+    file_index = zip_offset
     train_dir = f'databases/train_{file_index}'
     if os.path.exists(train_dir):
         shutil.rmtree(train_dir)
@@ -336,4 +339,4 @@ if __name__ == "__main__":
     
     upload('databases/words.txt') # 上传单词表 
 
-    run(0, len(thms), depth=max_depth, batch_size=n_futures)
+    run(min_thm_number, max_thm_number, depth=max_depth, batch_size=n_futures)
