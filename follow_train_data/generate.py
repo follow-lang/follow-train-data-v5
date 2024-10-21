@@ -255,7 +255,7 @@ def zip_dataset(dataset_dir, output_zip):
             file_list.append(file_path)  # 收集文件路径
 
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for file_path in tqdm(file_list, desc="压缩中", unit="文件"):  # 添加进度条
+        for file_path in tqdm(file_list, desc=f"{output_zip}-压缩中", unit="文件"):  # 添加进度条
             zipf.write(file_path, os.path.relpath(file_path, dataset_dir))
 
 def upload(output_zip):
