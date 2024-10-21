@@ -10,6 +10,7 @@ packages = [{include = "follow_train_data"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 huggingface-hub = "^0.25.2"
+numpy = "^2.1.2"
 
 
 [build-system]
