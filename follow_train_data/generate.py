@@ -11,6 +11,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 
+import threading
+
+total_memory_file_number = 100
+
+write_locks = [threading.Lock() for _ in range(total_memory_file_number)]
 
 global_vars = set()
 word_map: dict[str, int] = {}
@@ -200,8 +205,10 @@ def write_memory(memory, folder, zip_index):
     # random write
     file_idx = np.random.randint(0, 100)
     s = ' '.join([str(i) for i in memory]) + "\n"
-    with open(os.path.join(folder, f'{zip_index}-{file_idx}.txt'), "a") as f:
-        f.write(s)
+    # 使用对应的锁来保护写入操作
+    with write_locks[file_idx]:  # 选择相应的锁
+        with open(os.path.join(folder, f'{zip_index}-{file_idx}.txt'), "a") as f:
+            f.write(s)
 
 def generate_thm(index, thm, folder, depth=0, zip_index=0):
     global total_memory_count
