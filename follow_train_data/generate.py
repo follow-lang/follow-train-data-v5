@@ -9,6 +9,8 @@ from tqdm import tqdm
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import numpy as np
+
 
 global_vars = set()
 word_map: dict[str, int] = {}
@@ -194,7 +196,14 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
     if len(next_level_operations) > 0 and depth > 0 and total_memory_count < max_memory_size:
         yield from get_deep_memory(next_level_operations, depth - 1, max_len) 
 
-def generate_thm(index, thm, folder, depth=0):
+def write_memory(memory, folder, zip_index):
+    # random write
+    file_idx = np.random.randint(0, 100)
+    s = ' '.join([str(i) for i in memory]) + "\n"
+    with open(os.path.join(folder, f'{zip_index}-{file_idx}.txt'), "a") as f:
+        f.write(s)
+
+def generate_thm(index, thm, folder, depth=0, zip_index=0):
     global total_memory_count
     memories, operations = get_train_data(thm)
     invalid = False
@@ -204,19 +213,15 @@ def generate_thm(index, thm, folder, depth=0):
             break
     if invalid:
         return 
-    valid_memory_f = open(os.path.join(folder, thm + '.txt'), "w") 
     for memory in memories:
-        s = ' '.join([str(i) for i in memory]) + "\n"
-        valid_memory_f.write(s)
+        write_memory(memory, folder, zip_index)
         total_memory_count += 1
     for memory in get_deep_memory(operations, depth, max_len):
-        s = ' '.join([str(i) for i in memory]) + "\n"
-        valid_memory_f.write(s)
-    valid_memory_f.close()
+        write_memory(memory, folder, zip_index)
     print(f"{index}: {thm}")
 
 
-def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
+def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0, zip_index=0):
     index = start_idx
     # 创建线程池
     with ThreadPoolExecutor(max_workers=n_thread) as executor:
@@ -229,7 +234,7 @@ def generate_thms(start_idx: int, end_idx:int, train_dir: str, depth=0):
                         futures.remove(future)
             thm = thms[index]
             # 提交任务到线程池
-            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth))
+            futures.append(executor.submit(generate_thm, index, thm, train_dir, depth, zip_index))
             index += 1
         # 确保所有任务完成
         for future in as_completed(futures):
@@ -279,7 +284,7 @@ def run(start, end, depth, batch_size=128):
 
     for start_idx in range(start, end, batch_size):
         end_idx = start_idx + batch_size if start_idx + batch_size < end else end
-        generate_thms(start_idx, end_idx, train_dir, depth) 
+        generate_thms(start_idx, end_idx, train_dir, depth, file_index) 
 
         # 检查文件夹大小
         if total_memory_count > max_memory_size: 
