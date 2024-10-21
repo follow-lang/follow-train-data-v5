@@ -294,6 +294,13 @@ def run(start, end, depth, batch_size=128):
             if os.path.exists(train_dir):
                 shutil.rmtree(train_dir)
             os.makedirs(train_dir)
+    
+    if os.path.exists(train_dir) and os.listdir(train_dir):  # 检查文件夹是否存在且非空
+        output_zip = train_dir + ".zip"
+        zip_dataset(train_dir, output_zip)
+        upload(output_zip)
+        shutil.rmtree(train_dir)
+        os.remove(output_zip)
 
 if __name__ == "__main__":
     # 删除旧文件夹
