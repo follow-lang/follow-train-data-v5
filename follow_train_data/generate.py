@@ -18,15 +18,14 @@ total_memory_file_number = 100
 write_locks = [threading.Lock() for _ in range(total_memory_file_number)]
 
 global_vars = set()
-word_map: dict[str, int] = {}
-max_len = 1024
+max_len = 2*1024
 n_thread = 32
 n_futures = 32
 total_memory_count = 0 
 max_memory_size = 2*1024*1024
 max_depth = 2
 min_thm_number = 0
-max_thm_number = 20000
+max_thm_number = 10000
 zip_offset = 0
 
 def get_folder_size(folder_path):
@@ -56,9 +55,8 @@ def tokenizer(stmt: str):
     if len(stmt) == 0:
         return []
     # 减少token的数量 
-    toks = [word for word in stmt.split(" ") if word not in ('(', ')', ',')]
+    toks = stmt.split(" ")
     return toks
-
 
 def stmt_subs(targets, conditions, dvs, arg_map={}):
     new_targets = [
@@ -93,7 +91,6 @@ def get_block_train_data(targets, conditions, dvs, tails=[]):
         for dv in dvs:
             rst.append(" ".join(["(", dv[0], ",", dv[1], ")"]))
     rst += tails
-    rst.append("<end>")
     return " ".join(rst)
 
 
@@ -102,12 +99,12 @@ def get_axiom_train_data(axiom, arg_map={}):
         axiom["targets"], axiom["conditions"], axiom["dvs"], arg_map
     )
     rst = get_block_train_data(new_targets, new_conditions, new_diffs)
-    rst = " ".join([rst, rst, "<qed>", "<end>"]) # [state, action, <qed>]
-    return [tokenizer(rst)], []
+    rst = " ".join(["<state>", rst, "</state>", "<action>", rst, "</action>", "<qed>"]) # [state, action, <qed>]
+    return [(tokenizer(rst), (1, 1, 0))], [] # (memory, (V(s), V(a), V(s')))
 
 
 def get_thm_train_data(thm, arg_map={}):
-    new_targets, new_conditions, new_diffs = stmt_subs(
+    _, new_conditions, new_diffs = stmt_subs(
         thm["targets"], thm["conditions"], thm["dvs"], arg_map
     )
     tails = []
@@ -121,14 +118,16 @@ def get_thm_train_data(thm, arg_map={}):
 
     states = thm["states"]
     actions = thm["actions"]
+    state_costs = thm["state_costs"]
+    action_costs = thm["action_costs"]
 
     new_state_tokens_list = []
     for state in states:
         if len(state) == 0:
-            new_state_tokens = '<qed> <end>'
+            new_state_tokens = '<qed>'
         else:
             new_state, _, _ = stmt_subs(state, [], [], arg_map)
-            new_state_tokens = get_block_train_data(new_state, [], [], tails)
+            new_state_tokens = "<state> " + get_block_train_data(new_state, [], [], tails) + " </state>"
         new_state_tokens_list.append(tokenizer(new_state_tokens))
     
     new_action_tokens_list = []
@@ -136,23 +135,14 @@ def get_thm_train_data(thm, arg_map={}):
         new_a_targets, new_a_conditions, new_a_dvs = stmt_subs(
             a_targets, a_conditions, a_dvs, arg_map
         )
-        action_tokens = get_block_train_data(new_a_targets, new_a_conditions, new_a_dvs)
+        action_tokens = "<action> " + get_block_train_data(new_a_targets, new_a_conditions, new_a_dvs) + " </action>"
         new_action_tokens_list.append(tokenizer(action_tokens))
 
     memories = []
     for start_idx in range(len(new_action_tokens_list)):
-        memory = new_state_tokens_list[start_idx] + new_action_tokens_list[start_idx]
-        initial_length = len(memory)
-        end_idx = start_idx + 1
-        while len(memory) < max_len and end_idx < len(new_state_tokens_list):
-            memory += new_state_tokens_list[end_idx]
-            if end_idx < len(new_action_tokens_list):
-                memory += new_action_tokens_list[end_idx]
-            end_idx += 1
-        if initial_length < len(memory):
-            # 补充信息导致超长
-            memory = memory[:max_len]
-        memories.append(memory)
+        memory = new_state_tokens_list[start_idx] + new_action_tokens_list[start_idx] + new_state_tokens_list[start_idx+1]
+        costs = (state_costs[start_idx], action_costs[start_idx], state_costs[start_idx + 1])
+        memories.append((memory, costs))
     new_operators = []
     for op_label, op_args in thm["operators"]:
         new_op_args = stmt_subs(op_args, [], [], arg_map)[0]
@@ -204,25 +194,21 @@ def get_deep_memory(operations, depth=0, max_len=max_len):
 def write_memory(memory, folder, zip_index):
     # random write
     file_idx = np.random.randint(0, total_memory_file_number)
-    s = ' '.join([str(i) for i in memory]) + "\n"
+    s = ' '.join(memory[0])
+    costs = ' '.join([str(i) for i in memory[1]])
+    line = costs + '\t' + s + '\n'
     # 使用对应的锁来保护写入操作
     with write_locks[file_idx]:  # 选择相应的锁
         with open(os.path.join(folder, f'{zip_index}-{file_idx}.txt'), "a") as f:
-            f.write(s)
+            f.write(line)
 
 def generate_thm(index, thm, folder, depth=0, zip_index=0):
     global total_memory_count
     memories, operations = get_train_data(thm)
-    invalid = False
     for memory in memories:
-        if not check_seq(memory):
-            invalid = True  # 至少当前定理证明过程应该满足完整性
-            break
-    if invalid:
-        return 
-    for memory in memories:
-        write_memory(memory, folder, zip_index)
-        total_memory_count += 1
+        if check_seq(memory):
+            write_memory(memory, folder, zip_index)
+            total_memory_count += 1
     for memory in get_deep_memory(operations, depth, max_len):
         write_memory(memory, folder, zip_index)
     print(f"{index}: {thm}")
@@ -327,7 +313,6 @@ if __name__ == "__main__":
     extracted_files = os.listdir("databases/")
     print("Extracted files: ", extracted_files)
 
-
     json_files = os.listdir("databases/json")
     print("files: ", len(json_files))
     with open("databases/json/content.follow.json", "r") as config_f:
@@ -336,16 +321,12 @@ if __name__ == "__main__":
     print("file_deps: ", len(file_deps))
     # 预期文件夹files中的文件数比 content.follow.json 中记录的文件多1个
 
-
     json_size = get_folder_size("databases/json")
     code_size = get_folder_size("databases/code")
 
     print(f"Total json folder size: {json_size / 1024} GB")
     print(f"Total code folder size: {code_size} MB")
 
-    types = read_config("types.txt")
-    terms = read_config("terms.txt")
-    axioms = read_config("axioms.txt")
     thms = read_config("thms.txt")
     words = read_config("words.txt")
 
@@ -353,9 +334,12 @@ if __name__ == "__main__":
         for idx in range(200):
             global_vars.add(f"g{t[0]}{idx}")
             global_vars.add(f"v{t[0]}{idx}")
-    for idx, word in enumerate(words):
-        word_map[word] = idx
     
-    upload('databases/words.txt') # 上传单词表 
-
+    for new_word in ['<state>', '</state>', '<action>', '</action>', '<qed>']:
+        if new_word not in words:
+            words.append(new_word)
+    with open("databases/words.txt", 'w') as f:
+        f.writelines([word + '\n' for word in words])
+    upload("databases/words.txt")
+    
     run(min_thm_number, max_thm_number, depth=max_depth, batch_size=n_futures)
