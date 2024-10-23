@@ -341,5 +341,8 @@ if __name__ == "__main__":
     with open("databases/words.txt", 'w') as f:
         f.writelines([word + '\n' for word in words])
     upload("databases/words.txt")
+
+    if max_thm_number < 0:
+        max_thm_number = len(thms)
     
     run(min_thm_number, max_thm_number, depth=max_depth, batch_size=n_futures)
