@@ -26,7 +26,7 @@ max_memory_size = 2*1024*1024
 max_depth = 3 # 初始的thm尝试探索深一些
 min_thm_number = 40000
 max_thm_number = -1
-zip_offset = 0
+zip_offset = 300
 
 def get_folder_size(folder_path):
     total_size = 0
