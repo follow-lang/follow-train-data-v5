@@ -24,9 +24,9 @@ n_futures = 32
 total_memory_count = 0 
 max_memory_size = 2*1024*1024
 max_depth = 2
-min_thm_number = 0
-max_thm_number = 10000
-zip_offset = 0
+min_thm_number = 40000
+max_thm_number = -1
+zip_offset = 300
 
 def get_folder_size(folder_path):
     total_size = 0
