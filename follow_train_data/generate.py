@@ -160,8 +160,8 @@ def get_train_data(label, input_args=[]):
         return get_axiom_train_data(block, arg_map) 
     return get_thm_train_data(block, arg_map) # (memories, new_operators)
 
-def check_seq(toks: list[int], max_len=max_len):
-    if len(toks) <= max_len:
+def check_seq(memory, max_len=max_len):
+    if len(memory[0]) <= max_len:
         return True
     return False 
 
