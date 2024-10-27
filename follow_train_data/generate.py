@@ -24,9 +24,9 @@ n_futures = 32
 total_memory_count = 0 
 max_memory_size = 2*1024*1024
 max_depth = 2 # 初始的thm尝试探索深一些
-min_thm_number = 30000
-max_thm_number = 40000
-zip_offset = 300
+min_thm_number = 40000
+max_thm_number = -1
+zip_offset = 400
 
 def get_folder_size(folder_path):
     total_size = 0
