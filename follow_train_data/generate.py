@@ -23,7 +23,7 @@ n_thread = 32
 n_futures = 32
 total_memory_count = 0 
 max_memory_size = 2*1024*1024
-max_depth = 3 # 初始的thm尝试探索深一些
+max_depth = 2 # 初始的thm尝试探索深一些
 min_thm_number = 40000
 max_thm_number = -1
 zip_offset = 300
@@ -55,7 +55,7 @@ def tokenizer(stmt: str):
     if len(stmt) == 0:
         return []
     # 减少token的数量 
-    toks = stmt.split(" ")
+    toks = [word for word in stmt.split(" ") if word not in ('(', ')', ',')]
     return toks
 
 def stmt_subs(targets, conditions, dvs, arg_map={}):
@@ -104,6 +104,8 @@ def get_axiom_train_data(axiom, arg_map={}):
 
 
 def get_thm_train_data(thm, arg_map={}):
+    global total_memory_count, max_memory_size
+
     _, new_conditions, new_diffs = stmt_subs(
         thm["targets"], thm["conditions"], thm["dvs"], arg_map
     )
@@ -145,8 +147,12 @@ def get_thm_train_data(thm, arg_map={}):
             continue
         costs = (state_costs[start_idx], action_costs[start_idx], state_costs[start_idx + 1])
         memories.append((memory, costs))
+        if total_memory_count + len(memories) >= max_memory_size:
+            break
     new_operators = []
     for op_label, op_args in thm["operators"]:
+        if total_memory_count + len(memories) + len(new_operators) >= max_memory_size:
+            break
         new_op_args = stmt_subs(op_args, [], [], arg_map)[0]
         new_operators.append((op_label, new_op_args))
     return memories, new_operators
